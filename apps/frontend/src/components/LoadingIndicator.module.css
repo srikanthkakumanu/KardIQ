@@ -1,0 +1,4 @@
+.loading {
+  color: var(--color-muted);
+  font-style: italic;
+}
