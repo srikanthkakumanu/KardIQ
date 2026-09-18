@@ -1,0 +1,32 @@
+# Node / Next.js
+node_modules/
+.next/
+out/
+npm-debug.log*
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# Java / Gradle
+build/
+.gradle/
+*.class
+!gradle/wrapper/gradle-wrapper.jar
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Docker local overrides
+docker-compose.override.yml
