@@ -6,6 +6,8 @@ import com.example.cards.api.dto.CardResponse;
 import com.example.cards.domain.Card;
 import com.example.cards.infrastructure.CardMapper;
 import com.example.cards.infrastructure.CardRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,7 @@ import java.util.stream.Collectors;
 @Service
 public class CardServiceImpl implements CardService {
 
+    private static final Logger log = LoggerFactory.getLogger(CardServiceImpl.class);
     private static final int MAX_TAGS = 8;
 
     private final CardRepository cardRepository;
@@ -48,7 +51,9 @@ public class CardServiceImpl implements CardService {
     @Transactional
     public CardResponse createCard(CardRequest request) {
         Card card = new Card(UUID.randomUUID(), request.title(), request.body(), normalizeTags(request.tags()));
-        return cardMapper.toResponse(cardRepository.save(card));
+        Card saved = cardRepository.save(card);
+        log.info("Created card {}", saved.getId());
+        return cardMapper.toResponse(saved);
     }
 
     @Override
@@ -56,6 +61,7 @@ public class CardServiceImpl implements CardService {
     public CardResponse updateCard(UUID id, CardRequest request) {
         Card card = findOrThrow(id);
         card.update(request.title(), request.body(), normalizeTags(request.tags()));
+        log.info("Updated card {}", id);
         return cardMapper.toResponse(card);
     }
 
@@ -66,10 +72,14 @@ public class CardServiceImpl implements CardService {
             throw new CardNotFoundException(id);
         }
         cardRepository.deleteById(id);
+        log.info("Deleted card {}", id);
     }
 
     private Card findOrThrow(UUID id) {
-        return cardRepository.findById(id).orElseThrow(() -> new CardNotFoundException(id));
+        return cardRepository.findById(id).orElseThrow(() -> {
+            log.debug("Card {} not found", id);
+            return new CardNotFoundException(id);
+        });
     }
 
     private List<String> normalizeTags(List<String> tags) {
