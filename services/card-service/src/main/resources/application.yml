@@ -1,0 +1,31 @@
+server:
+  port: ${CARD_SERVICE_PORT:8080}
+
+spring:
+  application:
+    name: card-service
+  datasource:
+    url: jdbc:postgresql://${CARD_DB_HOST:localhost}:${CARD_DB_PORT:5432}/${CARD_DB_NAME:kardiq}
+    username: ${CARD_DB_USER:kardiq}
+    password: ${CARD_DB_PASSWORD:kardiq}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
