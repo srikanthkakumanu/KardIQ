@@ -1,9 +1,27 @@
+import re
+
 from neo4j import Driver
 
 from app.domain.models import CardNode, GraphRelationship
 
 # All Cypher for this service lives in this module, and every query is
 # parameterized - never string-concatenated - per graph-rag/CLAUDE.md.
+
+# A generic (not example-specific) English stopword list, so a natural
+# question like "How does LangChain connect to OpenAI?" reduces to
+# meaningful keywords ("langchain", "openai") instead of being matched as
+# one long literal string against short card titles.
+_STOPWORDS = {
+    "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
+    "how", "does", "do", "did", "to", "of", "in", "on", "for", "and", "or",
+    "with", "what", "why", "when", "who", "which", "this", "that", "these",
+    "those", "it", "its", "as", "at", "by", "from", "about",
+}
+
+
+def _extract_keywords(text: str) -> list[str]:
+    words = re.findall(r"[a-z0-9]+", text.lower())
+    return [word for word in words if len(word) >= 3 and word not in _STOPWORDS]
 
 
 class GraphRepository:
@@ -48,21 +66,28 @@ class GraphRepository:
             )
 
     def keyword_match(self, query_text: str, limit: int) -> list[dict]:
-        # Cypher param is named search_text, not query: neo4j's Session.run()
+        # query_text may be a full natural-language question, not a single
+        # term, so it's reduced to keywords in Python first (a Neo4j
+        # uniqueness/full-text index isn't needed for this small a graph).
+        # Cypher param is named `keywords`, not `query`: neo4j's Session.run()
         # already has a positional parameter literally named `query` (the
-        # Cypher text itself), so a keyword arg named `query` collides with it.
+        # Cypher text itself), so a keyword arg named `query` would collide.
+        keywords = _extract_keywords(query_text)
+        if not keywords:
+            return []
+
         cypher = (
             "MATCH (c:Card) "
-            "WHERE toLower(c.title) CONTAINS toLower($search_text) "
-            "   OR toLower(c.body) CONTAINS toLower($search_text) "
-            "   OR any(tag IN c.tags WHERE toLower(tag) CONTAINS toLower($search_text)) "
+            "WHERE any(word IN $keywords WHERE toLower(c.title) CONTAINS word "
+            "                              OR toLower(c.body) CONTAINS word "
+            "                              OR any(tag IN c.tags WHERE toLower(tag) CONTAINS word)) "
             "RETURN c.id AS id, c.title AS title, c.tags AS tags, "
-            "       (toLower(c.title) = toLower($search_text) "
-            "        OR any(tag IN c.tags WHERE toLower(tag) = toLower($search_text))) AS exact_match "
+            "       any(word IN $keywords WHERE toLower(c.title) = word "
+            "                              OR any(tag IN c.tags WHERE toLower(tag) = word)) AS exact_match "
             "LIMIT $limit"
         )
         with self._driver.session() as session:
-            result = session.run(cypher, search_text=query_text, limit=limit)
+            result = session.run(cypher, keywords=keywords, limit=limit)
             return [dict(record) for record in result]
 
     def one_hop_expand(self, card_ids: list[str]) -> list[dict]:

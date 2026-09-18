@@ -57,7 +57,7 @@ def test_card_exists_returns_false_when_no_record():
     assert repository.card_exists("missing") is False
 
 
-def test_keyword_match_passes_query_text_as_a_parameter():
+def test_keyword_match_passes_extracted_keywords_as_a_parameter():
     driver, session = _mock_driver()
     session.run.return_value = []
     repository = GraphRepository(driver)
@@ -66,8 +66,29 @@ def test_keyword_match_passes_query_text_as_a_parameter():
 
     args, kwargs = session.run.call_args
     assert "LangChain" not in args[0]
-    assert kwargs["search_text"] == "LangChain"
+    assert kwargs["keywords"] == ["langchain"]
     assert kwargs["limit"] == 5
+
+
+def test_keyword_match_reduces_a_natural_language_question_to_meaningful_keywords():
+    driver, session = _mock_driver()
+    session.run.return_value = []
+    repository = GraphRepository(driver)
+
+    repository.keyword_match("How does LangChain connect to OpenAI?", 5)
+
+    args, kwargs = session.run.call_args
+    assert kwargs["keywords"] == ["langchain", "connect", "openai"]
+
+
+def test_keyword_match_returns_empty_without_querying_when_no_keywords_remain():
+    driver, session = _mock_driver()
+    repository = GraphRepository(driver)
+
+    result = repository.keyword_match("is the a", 5)
+
+    assert result == []
+    session.run.assert_not_called()
 
 
 def test_one_hop_expand_passes_card_ids_as_a_parameter():
