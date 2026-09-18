@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: kardiq
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      # Prevents Kubernetes from auto-injecting <SERVICE>_PORT-style env
+      # vars for every Service in the namespace - these can collide with
+      # (and corrupt) an app's own env-var-driven config, as happened with
+      # Neo4j (NEO4J_PORT_7687_TCP_PORT was misread as a config setting).
+      enableServiceLinks: false
+      containers:
+        - name: frontend
+          # NEXT_PUBLIC_AGENT_URL is baked into this image at build time
+          # (see apps/frontend/Dockerfile) - it is NOT read from the
+          # ConfigMap/Secret at runtime. The default build
+          # (docker compose build frontend) bakes in http://localhost:8000,
+          # which works for local testing if you port-forward both this
+          # service and the agent service to their default local ports.
+          image: kardiq-frontend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 20

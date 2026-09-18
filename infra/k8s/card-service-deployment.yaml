@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: card-service
+  namespace: kardiq
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: card-service
+  template:
+    metadata:
+      labels:
+        app: card-service
+    spec:
+      # Prevents Kubernetes from auto-injecting <SERVICE>_PORT-style env
+      # vars for every Service in the namespace - these can collide with
+      # (and corrupt) an app's own env-var-driven config, as happened with
+      # Neo4j (NEO4J_PORT_7687_TCP_PORT was misread as a config setting).
+      enableServiceLinks: false
+      containers:
+        - name: card-service
+          # Built locally via `docker compose build` - see infra/k8s/README.md
+          # for how to point this at a real registry image instead.
+          image: kardiq-card-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef: { name: kardiq-config }
+            - secretRef: { name: kardiq-secrets }
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 40
+            periodSeconds: 20

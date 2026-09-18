@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-server
+  namespace: kardiq
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcp-server
+  template:
+    metadata:
+      labels:
+        app: mcp-server
+    spec:
+      # Prevents Kubernetes from auto-injecting <SERVICE>_PORT-style env
+      # vars for every Service in the namespace - these can collide with
+      # (and corrupt) an app's own env-var-driven config, as happened with
+      # Neo4j (NEO4J_PORT_7687_TCP_PORT was misread as a config setting).
+      enableServiceLinks: false
+      containers:
+        - name: mcp-server
+          image: kardiq-mcp-server:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8010
+          envFrom:
+            - configMapRef: { name: kardiq-config }
+            - secretRef: { name: kardiq-secrets }
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8010
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8010
+            initialDelaySeconds: 15
+            periodSeconds: 20

@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: neo4j
+  namespace: kardiq
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: neo4j
+  template:
+    metadata:
+      labels:
+        app: neo4j
+    spec:
+      # Prevents Kubernetes from auto-injecting <SERVICE>_PORT-style env
+      # vars for every Service in the namespace - these can collide with
+      # (and corrupt) an app's own env-var-driven config, as happened with
+      # Neo4j (NEO4J_PORT_7687_TCP_PORT was misread as a config setting).
+      enableServiceLinks: false
+      containers:
+        - name: neo4j
+          image: neo4j:5-community
+          ports:
+            - containerPort: 7474
+            - containerPort: 7687
+          env:
+            - name: NEO4J_AUTH
+              valueFrom:
+                secretKeyRef: { name: kardiq-secrets, key: NEO4J_AUTH }
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 7474
+            initialDelaySeconds: 15
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 7474
+            initialDelaySeconds: 45
+            periodSeconds: 20
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: neo4j-pvc

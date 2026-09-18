@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: graph-rag
+  namespace: kardiq
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: graph-rag
+  template:
+    metadata:
+      labels:
+        app: graph-rag
+    spec:
+      # Prevents Kubernetes from auto-injecting <SERVICE>_PORT-style env
+      # vars for every Service in the namespace - these can collide with
+      # (and corrupt) an app's own env-var-driven config, as happened with
+      # Neo4j (NEO4J_PORT_7687_TCP_PORT was misread as a config setting).
+      enableServiceLinks: false
+      containers:
+        - name: graph-rag
+          image: kardiq-graph-rag:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8020
+          envFrom:
+            - configMapRef: { name: kardiq-config }
+            - secretRef: { name: kardiq-secrets }
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8020
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8020
+            initialDelaySeconds: 20
+            periodSeconds: 20
