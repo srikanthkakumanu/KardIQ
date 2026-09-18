@@ -1,0 +1,23 @@
+[project]
+name = "mcp-server"
+version = "0.1.0"
+description = "KardIQ MCP server - tool boundary between the AI agent and card-service/graph-rag"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "httpx>=0.27",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.5",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.uv]
+package = false
