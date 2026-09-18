@@ -24,6 +24,7 @@ build/
 .env.*
 !.env.example
 !.env.local.example
+infra/k8s/secret.yaml
 
 # OS / editor
 .DS_Store
