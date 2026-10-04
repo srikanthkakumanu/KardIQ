@@ -1,4 +1,4 @@
-# KardIQ - Knowledge Card Assistant
+# KardIQ - Knowledge Card Assistant (Agentic AI Assistant)
 
 A small, production-shaped reference system: users create short learning
 cards and ask questions about them, and answers are grounded in those
